@@ -71,7 +71,7 @@ export function MobileMenu({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col gap-5 p-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-3">
             <AuthActions
               loading={authLoading}
               isLoggedIn={isLoggedIn}

@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyAccessTokenEdge } from "@/lib/auth/domain/jwtEdge";
 
-export function middleware(req: NextRequest) {
-  const url = req.nextUrl;
-  const { pathname } = url;
+export async function middleware(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
 
-  const cookieToken = req.cookies.get("access_token")?.value;
-  const headerAuth = req.headers.get("authorization");
-  const headerToken = headerAuth?.startsWith("Bearer ") ? headerAuth.slice(7) : undefined;
+  const accessToken = req.cookies.get("access_token")?.value;
+  const hasRefresh = Boolean(req.cookies.get("refresh_token")?.value);
 
-  const accessToken = cookieToken ?? headerToken;
+  let accessValid = false;
+  if (accessToken) {
+    try {
+      await verifyAccessTokenEdge(accessToken);
+      accessValid = true;
+    } catch {}
+  }
 
   const isAuthPage =
     pathname === "/login" ||
@@ -17,43 +22,28 @@ export function middleware(req: NextRequest) {
     pathname === "/reset-password";
 
   const isDashboard = pathname.startsWith("/dashboard");
+  const isAdmin = pathname.startsWith("/admin");
 
-  // 1) Guest-only routes: login/register/forgot/reset
   if (isAuthPage) {
-    // If user has ANY access_token, treat them as logged in and send to dashboard
-    if (accessToken) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+    if (accessValid) return NextResponse.redirect(new URL("/dashboard", req.url));
+    if (hasRefresh) {
+      const refreshUrl = new URL("/api/auth/refresh", req.url);
+      refreshUrl.searchParams.set("next", "/dashboard");
+      return NextResponse.redirect(refreshUrl);
     }
-
-    // No token -> guest -> allow access
     return NextResponse.next();
   }
 
-  // 2) Protected routes: /dashboard/**
-  if (isDashboard) {
-    // No token -> force login
-    if (!accessToken) {
-      return NextResponse.redirect(new URL("/login", req.url));
+  if (isDashboard || isAdmin) {
+    if (!accessValid && hasRefresh) {
+      const next = pathname + search;
+      const refreshUrl = new URL("/api/auth/refresh", req.url);
+      refreshUrl.searchParams.set("next", next);
+      return NextResponse.redirect(refreshUrl);
     }
-
-    // Token exists -> treat as authenticated, let API routes verify signature
-    const res = NextResponse.next();
-    // Optionally, you can just pass a flag header if you want
-    // res.headers.set("x-has-access-token", "true");
-    return res;
+    if (!accessValid && !hasRefresh) return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.next();
   }
 
-  // 3) Everything else is public
   return NextResponse.next();
 }
-
-export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/admin/:path*",
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/reset-password",
-  ],
-};

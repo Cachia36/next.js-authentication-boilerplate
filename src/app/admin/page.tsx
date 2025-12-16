@@ -1,26 +1,11 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { authService } from "@/lib/auth/domain/authService";
-import type { User } from "@/types/user";
 import { FeatureCard } from "@/components/layout/FeatureCard";
+import { getServerSession } from "@/lib/auth/server/getServerSession";
 
 export default async function AdminDashboardPage() {
-  // In server components, cookies() is synchronous
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("access_token")?.value;
+  const { user } = await getServerSession();
 
-  // No token at all – send them to login
-  if (!accessToken) {
-    redirect("/login");
-  }
-
-  let user: User;
-
-  try {
-    // getUserFromAccessToken will throw if token is invalid/expired
-    user = (await authService.getUserFromAccessToken(accessToken)) as User;
-  } catch (error) {
-    console.error("Admin getUserFromAccessToken error:", error);
+  if (!user) {
     redirect("/login");
   }
 

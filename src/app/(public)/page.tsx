@@ -21,7 +21,7 @@ const techStackItems = [
   "Vitest",
   "ESLint (flat config)",
   "Prettier",
-  "GitHub Workflows"
+  "GitHub Workflows",
 ];
 
 export default function HomePage() {
@@ -34,9 +34,13 @@ export default function HomePage() {
           title="Next.js Authentication Boilerplate"
           subtitle={
             <>
-              A production-leaning authentication boilerplate built with Next.js, TypeScript, JWT, and Tailwind CSS. 
-              <br/><br/>
-              Easy to use and swap database repositories to switch between databases such as MongoDb and PostgreSQL, or any other database as needed. Email provider is also easy to swap, to ensure compatibility with any future projects
+              A production-leaning authentication boilerplate built with Next.js, TypeScript, JWT,
+              and Tailwind CSS.
+              <br />
+              <br />
+              Easy to use and swap database repositories to switch between databases such as MongoDb
+              and PostgreSQL, or any other database as needed. Email provider is also easy to swap,
+              to ensure compatibility with any future projects
             </>
           }
         />
@@ -114,12 +118,15 @@ export default function HomePage() {
             <h3 className="text-foreground mb-2 text-sm font-semibold">Auth &amp; Domain</h3>
             <ul className="list-disc space-y-1 pl-4">
               <li>
-                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">src/lib/auth/domain</code> –{" "}
-                auth service, JWT handling, password hashing
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  src/lib/auth/domain
+                </code>{" "}
+                – auth service, JWT handling, password hashing
               </li>
               <li>
                 <code className="bg-muted rounded px-1 py-0.5 text-[11px]">UserRepository</code>{" "}
-                abstraction with in-memory implementation for testing, as well as mongoDb implementation, easy to switch between repositories.
+                abstraction with in-memory implementation for testing, as well as mongoDb
+                implementation, easy to switch between repositories.
               </li>
               <li>Password reset tokens + pluggable email provider</li>
             </ul>
@@ -165,8 +172,8 @@ export default function HomePage() {
           <li>Log in and navigate to the dashboard to see a protected page.</li>
           <li>Try logging out and visiting the dashboard again to test the middleware.</li>
           <li>
-            Trigger the forgot/reset password flow. Check your email for
-            a link with resetToken, enter the link and reset your password.
+            Trigger the forgot/reset password flow. Check your email for a link with resetToken,
+            enter the link and reset your password.
           </li>
         </ol>
       </Section>
@@ -175,9 +182,11 @@ export default function HomePage() {
       <Section id="services">
         <h2 className="text-2xl font-semibold">Services / Use Cases</h2>
         <p className="text-muted-foreground text-sm leading-relaxed sm:text-base">
-          This boilerplate was designed for me to learn JWT and practice with the technologies listed, showcase to employers as part of my portfolio, and create a boilerplate for future projects
-          that may utilize authentication, role-based access
-          control, and clean architecture. This boilerplate is easy to extend, and <span className="text-success">database and email provider are easy to swap</span>
+          This boilerplate was designed for me to learn JWT and practice with the technologies
+          listed, showcase to employers as part of my portfolio, and create a boilerplate for future
+          projects that may utilize authentication, role-based access control, and clean
+          architecture. This boilerplate is easy to extend, and{" "}
+          <span className="text-success">database and email provider are easy to swap</span>
         </p>
       </Section>
 

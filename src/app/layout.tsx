@@ -6,7 +6,7 @@ import Footer from "@/components/layout/Footer";
 import Script from "next/script";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
-import { authService } from "@/lib/auth/domain/authService";
+import { getServerSession } from "@/lib/auth/server/getServerSession";
 
 export const dynamic = "force-dynamic";
 
@@ -51,28 +51,18 @@ const themeInitCode = `
     } catch (e) {
       // fail silently
     }
-  })();
+  })(); 
 `;
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies();
-  const accessToken = cookieStore.get("access_token")?.value;
 
-  // Theme from cookie (effective: "light" | "dark")
   const themeCookie = cookieStore.get("app_theme")?.value;
-  const effectiveTheme = themeCookie === "dark" ? "dark" : "light"; // default to light if missing
+  const effectiveTheme = themeCookie === "dark" ? "dark" : "light";
 
-  let user: { id: string; role?: string } | null = null;
+  const { user } = await getServerSession();
 
-  if (accessToken) {
-    try {
-      user = await authService.getUserFromAccessToken(accessToken);
-    } catch {
-      user = null;
-    }
-  }
-
-  const isLoggedIn = !!user;
+  const isLoggedIn = Boolean(user);
   const isAdmin = user?.role === "admin";
 
   return (

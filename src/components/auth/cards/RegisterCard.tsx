@@ -41,7 +41,7 @@ export function RegisterCard() {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // 🚫 Prevent multiple rapid submits
+    // Prevent multiple rapid submits
     if (isSubmitting) return;
 
     const errors: FieldErrors = {
@@ -55,7 +55,7 @@ export function RegisterCard() {
       return;
     }
 
-    // ✅ Start submit
+    // Start submit
     setIsSubmitting(true);
     clearFormMessage();
 

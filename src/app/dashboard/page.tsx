@@ -1,46 +1,20 @@
-import { cookies } from "next/headers";
-import { authService } from "@/lib/auth/domain/authService";
-import type { User } from "@/types/user";
+import { redirect } from "next/navigation";
+import { getServerSession } from "@/lib/auth/server/getServerSession";
 import { FeatureCard } from "@/components/layout/FeatureCard";
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get("access_token")?.value;
+  const { user } = await getServerSession();
 
-  // In normal flow, middleware should have blocked access without a token.
-  // So if we *still* don't have one, just show a fallback instead of redirecting.
-  if (!accessToken) {
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="mt-4 text-red-500">No access token found. Please log in again.</p>
-      </main>
-    );
-  }
-
-  let user: User | null = null;
-  try {
-    user = await authService.getUserFromAccessToken(accessToken);
-  } catch (error) {
-    // Token invalid/expired or user missing – don't redirect here to avoid loops.
-    // Just show a nice fallback. You can add a "Go to login" link if you like.
-    console.error("Dashboard getUserFromAccessToken error:", error);
-
-    return (
-      <main className="p-8">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="mt-4 text-red-500">
-          Your session seems to be invalid or expired. Please log in again.
-        </p>
-      </main>
-    );
+  // This is now the ONLY auth check
+  if (!user) {
+    redirect("/login");
   }
 
   return (
     <main className="p-8">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
       <p className="mt-4">Protected page. You must be logged in to see this.</p>
-      <p>Your account details, fetched from the accessToken inside the Cookies</p>
+
       <div className="mt-4">
         <FeatureCard title="">
           <pre>

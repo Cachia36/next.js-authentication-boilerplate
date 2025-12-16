@@ -1,33 +1,30 @@
-// src/lib/auth/jwtService.ts
 import jwt from "jsonwebtoken";
 import type { User } from "@/types/user";
 import { JWT_SECRET, JWT_REFRESH_SECRET } from "../../core/env";
 import { Unauthorized } from "../../core/errors";
-import { AuthTokenPayload } from "@/types/auth";
+import type { AuthTokenPayload } from "@/types/auth";
 
 const ACCESS_EXPIRES_IN = "15m";
 const REFRESH_EXPIRES_IN = "7d";
 
-export function generateAccessToken(user: User): string {
-  const payload: AuthTokenPayload = {
-    sub: user.id,
-    email: user.email,
-    role: user.role,
-    createdAt: user.createdAt ?? new Date().toISOString(),
-  };
-
+// Use this when you already have the payload (e.g. in getServerSession)
+export function signAccessToken(payload: AuthTokenPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_EXPIRES_IN });
 }
 
-export function generateRefreshToken(user: User): string {
-  const payload: AuthTokenPayload = {
+// Convenience wrapper (existing callers can keep using this)
+export function generateAccessToken(user: User): string {
+  return signAccessToken({
     sub: user.id,
     email: user.email,
     role: user.role,
     createdAt: user.createdAt ?? new Date().toISOString(),
-  };
+  });
+}
 
-  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES_IN });
+// Refresh token should be minimal: only user id
+export function generateRefreshToken(user: User): string {
+  return jwt.sign({ sub: user.id }, JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES_IN });
 }
 
 export function verifyAccessToken(token: string): AuthTokenPayload {
@@ -38,9 +35,9 @@ export function verifyAccessToken(token: string): AuthTokenPayload {
   }
 }
 
-export function verifyRefreshToken(token: string): AuthTokenPayload {
+export function verifyRefreshToken(token: string): { sub: string } {
   try {
-    return jwt.verify(token, JWT_REFRESH_SECRET) as AuthTokenPayload;
+    return jwt.verify(token, JWT_REFRESH_SECRET) as { sub: string };
   } catch {
     throw Unauthorized("Invalid or expired refresh token", "REFRESH_TOKEN_INVALID");
   }
