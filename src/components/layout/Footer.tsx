@@ -7,21 +7,30 @@ export default function Footer() {
     <footer className="border-border text-muted-foreground mt-12 w-full border-t py-6 text-center text-xs">
       <div className="mb-2 flex items-center justify-center gap-3">
         <a
-          href="https://github.com/cachia36"
+          href="https://github.com/Cachia36"
           target="_blank"
           rel="noreferrer"
-          className="border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-full border transition"
+          className="border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-10 w-10 items-center justify-center rounded-full border transition"
         >
-          <FaGithub className="h-4 w-4" />
+          <FaGithub className="h-6 w-6" />
         </a>
 
         <a
           href="https://www.linkedin.com/in/kyle-cachia-41bbb8252/"
           target="_blank"
           rel="noreferrer"
-          className="border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-8 w-8 items-center justify-center rounded-full border transition"
+          className="border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-10 w-10 items-center justify-center rounded-full border transition"
         >
-          <FaLinkedin className="h-4 w-4" />
+          <FaLinkedin className="h-6 w-6" />
+        </a>
+
+        <a
+          href="https://kylecachia.vercel.app/"
+          target="_blank"
+          rel="noreferrer"
+          className="border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-10 w-10 items-center justify-center rounded-full border transition"
+        >
+          <img src="/websiteLogo.png" className="h-6 w-6" alt="portfolio"/>
         </a>
       </div>
 
