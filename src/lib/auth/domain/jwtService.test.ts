@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import jwt from "jsonwebtoken";
-
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -12,7 +11,6 @@ import type { User } from "@/types/user";
 // --------------------
 // Mocks
 // --------------------
-
 vi.mock("jsonwebtoken", () => ({
   default: {
     sign: vi.fn(),
@@ -31,7 +29,6 @@ const mockVerify = jwt.verify as unknown as ReturnType<typeof vi.fn>;
 // --------------------
 // Fixtures
 // --------------------
-
 const mockUser: User = {
   id: "user-1",
   email: "user@email.com",
@@ -91,13 +88,81 @@ describe("jwtService", () => {
     it("generates a refresh token with correct payload and options", () => {
       mockSign.mockReturnValueOnce("refresh-token");
 
-      const token = generateRefreshToken(mockUser);
+      const token = generateRefreshToken({ userId: mockUser.id, sessionId: "sid-123" });
 
-      expect(mockSign).toHaveBeenCalledWith({ sub: mockUser.id }, "refresh-secret", {
-        expiresIn: "7d",
+      expect(mockSign).toHaveBeenCalledTimes(1);
+
+      const [payload, secret, options] = mockSign.mock.calls[0];
+
+      expect(secret).toBe("refresh-secret");
+      expect(options).toEqual({ expiresIn: "7d" });
+
+      expect(payload).toMatchObject({
+        sub: mockUser.id,
+        sid: "sid-123",
+        typ: "refresh",
       });
 
+      // jti should be generated
+      expect(typeof (payload as any).jti).toBe("string");
+      expect((payload as any).jti.length).toBeGreaterThan(5);
+
       expect(token).toBe("refresh-token");
+    });
+  });
+
+  describe("verifyRefreshToken", () => {
+    it("returns payload when refresh token is valid (minimal payload)", () => {
+      mockVerify.mockReturnValueOnce({
+        sub: mockUser.id,
+        sid: "sid-123",
+        jti: "jti-123",
+        typ: "refresh",
+      });
+
+      const payload = verifyRefreshToken("valid-refresh-token");
+
+      expect(mockVerify).toHaveBeenCalledWith("valid-refresh-token", "refresh-secret");
+
+      expect(payload).toEqual({
+        sub: mockUser.id,
+        sid: "sid-123",
+        jti: "jti-123",
+        typ: "refresh",
+      });
+    });
+
+    it("throws HttpError 401 when refresh token is invalid or expired", () => {
+      mockVerify.mockImplementationOnce(() => {
+        throw new Error("jwt invalid");
+      });
+
+      expect(() => verifyRefreshToken("bad-token")).toThrowError();
+
+      try {
+        verifyRefreshToken("bad-token");
+      } catch (err: any) {
+        expect(err.statusCode).toBe(401);
+        expect(err.code).toBe("REFRESH_TOKEN_INVALID");
+      }
+    });
+
+    it("throws HttpError 401 when refresh token payload is missing required fields", () => {
+      mockVerify.mockReturnValueOnce({
+        sub: mockUser.id,
+        // sid missing
+        jti: "jti-123",
+        typ: "refresh",
+      });
+
+      expect(() => verifyRefreshToken("token-with-bad-payload")).toThrowError();
+
+      try {
+        verifyRefreshToken("token-with-bad-payload");
+      } catch (err: any) {
+        expect(err.statusCode).toBe(401);
+        expect(err.code).toBe("REFRESH_TOKEN_INVALID");
+      }
     });
   });
 
@@ -127,39 +192,12 @@ describe("jwtService", () => {
       });
 
       expect(() => verifyAccessToken("bad-token")).toThrowError();
+
       try {
         verifyAccessToken("bad-token");
       } catch (err: any) {
         expect(err.statusCode).toBe(401);
         expect(err.code).toBe("TOKEN_INVALID");
-      }
-    });
-  });
-
-  describe("verifyRefreshToken", () => {
-    it("returns payload when refresh token is valid (minimal payload)", () => {
-      mockVerify.mockReturnValueOnce({
-        sub: "user-1",
-        // refresh token payload is intentionally minimal
-      });
-
-      const result = verifyRefreshToken("valid-refresh-token");
-
-      expect(mockVerify).toHaveBeenCalledWith("valid-refresh-token", "refresh-secret");
-      expect(result).toEqual({ sub: "user-1" });
-    });
-
-    it("throws HttpError 401 when refresh token is invalid or expired", () => {
-      mockVerify.mockImplementationOnce(() => {
-        throw new Error("jwt invalid");
-      });
-
-      expect(() => verifyRefreshToken("bad-token")).toThrowError();
-      try {
-        verifyRefreshToken("bad-token");
-      } catch (err: any) {
-        expect(err.statusCode).toBe(401);
-        expect(err.code).toBe("REFRESH_TOKEN_INVALID");
       }
     });
   });

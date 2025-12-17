@@ -2,10 +2,11 @@ import type { User, DbUser } from "@/types/user";
 import { HttpError } from "../../core/errors";
 import { repo } from "../repositories/currentRepo";
 import { hashPassword, verifyPassword } from "./passwordService";
-import { generateAccessToken, generateRefreshToken, verifyAccessToken } from "./jwtService";
+import { generateAccessToken, verifyAccessToken } from "./jwtService";
 import type { AuthTokenPayload } from "@/types/auth";
 import { logAuthEvent } from "../../core/logger";
 import { Unauthorized, Conflict } from "../../core/errors";
+import { issueRefreshToken } from "./refreshTokenService";
 
 export type AuthResult = {
   user: User;
@@ -39,7 +40,7 @@ export const authService = {
 
     const user = toPublicUser(created);
     const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const { token: refreshToken } = await issueRefreshToken(user);
 
     logAuthEvent("register_success", { userId: user.id, email: user.email });
 
@@ -63,7 +64,7 @@ export const authService = {
 
     const user = toPublicUser(found);
     const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const { token: refreshToken } = await issueRefreshToken(user);
 
     logAuthEvent("login_success", { userId: user.id });
 

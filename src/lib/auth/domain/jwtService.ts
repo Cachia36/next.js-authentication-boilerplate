@@ -3,6 +3,8 @@ import type { User } from "@/types/user";
 import { JWT_SECRET, JWT_REFRESH_SECRET } from "../../core/env";
 import { Unauthorized } from "../../core/errors";
 import type { AuthTokenPayload } from "@/types/auth";
+import crypto from "crypto";
+import type { RefreshTokenJwtPayload } from "@/types/refreshToken";
 
 const ACCESS_EXPIRES_IN = "15m";
 const REFRESH_EXPIRES_IN = "7d";
@@ -22,9 +24,17 @@ export function generateAccessToken(user: User): string {
   });
 }
 
-// Refresh token should be minimal: only user id
-export function generateRefreshToken(user: User): string {
-  return jwt.sign({ sub: user.id }, JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES_IN });
+export function generateRefreshToken(input: { userId: string; sessionId: string }): string {
+  const jti = crypto.randomUUID();
+
+  const payload: RefreshTokenJwtPayload = {
+    sub: input.userId,
+    sid: input.sessionId,
+    jti,
+    typ: "refresh",
+  };
+
+  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES_IN });
 }
 
 export function verifyAccessToken(token: string): AuthTokenPayload {
@@ -35,9 +45,15 @@ export function verifyAccessToken(token: string): AuthTokenPayload {
   }
 }
 
-export function verifyRefreshToken(token: string): { sub: string } {
+export function verifyRefreshToken(token: string): RefreshTokenJwtPayload {
   try {
-    return jwt.verify(token, JWT_REFRESH_SECRET) as { sub: string };
+    const payload = jwt.verify(token, JWT_REFRESH_SECRET) as RefreshTokenJwtPayload;
+
+    if (payload.typ !== "refresh" || !payload.sub || !payload.sid || !payload.jti) {
+      throw new Error("Invalid refresh payload");
+    }
+
+    return payload;
   } catch {
     throw Unauthorized("Invalid or expired refresh token", "REFRESH_TOKEN_INVALID");
   }

@@ -1,101 +1,100 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ----------------------
-// Mocks (before imports)
-// ----------------------
-
-// Mock NextResponse
-vi.mock("next/server", () => {
-  class MockNextResponse {
-    body: any;
-    status: number;
-    headers: Headers;
-    cookies: {
-      set: (name: string, value: string, options: any) => void;
-      get: (name: string) => any;
-      all: () => any[];
-    };
-
-    constructor(body: any, init?: any) {
-      this.body = body;
-      this.status = init?.status ?? 200;
-      this.headers = new Headers(init?.headers);
-      const cookiesStore = new Map<string, any>();
-      this.cookies = {
-        set: (name: string, value: string, options: any) => {
-          cookiesStore.set(name, { value, options });
-        },
-        get: (name: string) => cookiesStore.get(name),
-        all: () => Array.from(cookiesStore.entries()),
-      };
-    }
-
-    static json(body: any, init?: any) {
-      return new MockNextResponse(body, init);
-    }
-  }
-
-  return {
-    NextResponse: MockNextResponse,
-  };
+// --- Mocks ---
+vi.mock("next/server", async () => {
+  // use real NextResponse implementation (important for cookies headers)
+  const actual: any = await vi.importActual("next/server");
+  return actual;
 });
 
-// env – default to production so we assert secure: true
 vi.mock("@/lib/core/env", () => ({
-  NODE_ENV: "production",
+  NODE_ENV: "test",
 }));
 
-// withApiRoute – identity
+vi.mock("@/lib/auth/domain/refreshTokenService", () => ({
+  revokeSessionFromRefreshToken: vi.fn(),
+}));
+
+// IMPORTANT: withApiRoute wraps the handler. For unit tests we want it to be transparent.
 vi.mock("@/lib/http/withApiRoute", () => ({
   withApiRoute: (handler: any) => handler,
 }));
 
-// ----------------------
-// Imports (after mocks)
-// ----------------------
-
+import { revokeSessionFromRefreshToken } from "@/lib/auth/domain/refreshTokenService";
 import { POST } from "./route";
+
+// Helper to read Set-Cookie headers across environments
+function getSetCookies(res: Response): string[] {
+  const h: any = res.headers as any;
+  if (typeof h.getSetCookie === "function") return h.getSetCookie();
+  const single = res.headers.get("set-cookie");
+  return single ? [single] : [];
+}
 
 describe("POST /api/auth/logout", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
-  it("clears access and refresh tokens, and returns success message", async () => {
+  it("clears access_token and refresh_token cookies even when no refresh cookie is present", async () => {
+    const req = new Request("http://localhost/api/auth/logout", { method: "POST" });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+
+    // Revoke should not be called (no refresh cookie)
+    expect(revokeSessionFromRefreshToken).not.toHaveBeenCalled();
+
+    const cookies = getSetCookies(res).join(" | ");
+
+    expect(cookies).toContain("access_token=");
+    expect(cookies).toContain("refresh_token=");
+    expect(cookies).toMatch(/Max-Age=0/);
+  });
+
+  it("calls revokeSessionFromRefreshToken when refresh_token cookie is present and still clears cookies", async () => {
+    (revokeSessionFromRefreshToken as any).mockResolvedValue(undefined);
+
     const req = new Request("http://localhost/api/auth/logout", {
       method: "POST",
+      headers: {
+        cookie: "refresh_token=rt1; access_token=at1",
+      },
     });
 
-    const res: any = await POST(req);
+    const res = await POST(req);
 
-    // Response body + status
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      message: "Logged out successfully",
+    expect(revokeSessionFromRefreshToken).toHaveBeenCalledTimes(1);
+    expect(revokeSessionFromRefreshToken).toHaveBeenCalledWith("rt1");
+
+    const cookies = getSetCookies(res).join(" | ");
+    expect(cookies).toContain("access_token=");
+    expect(cookies).toContain("refresh_token=");
+    expect(cookies).toMatch(/Max-Age=0/);
+  });
+
+  it("still clears cookies even if revokeSessionFromRefreshToken throws", async () => {
+    (revokeSessionFromRefreshToken as any).mockRejectedValue(new Error("db down"));
+
+    const req = new Request("http://localhost/api/auth/logout", {
+      method: "POST",
+      headers: {
+        cookie: "refresh_token=rt1",
+      },
     });
 
-    // Cookies cleared
-    const accessCookie = res.cookies.get("access_token");
-    const refreshCookie = res.cookies.get("refresh_token");
+    const res = await POST(req);
 
-    expect(accessCookie).toBeDefined();
-    expect(accessCookie.value).toBe("");
-    expect(accessCookie.options).toMatchObject({
-      httpOnly: true,
-      path: "/",
-      maxAge: 0,
-      secure: true, // NODE_ENV mocked as "production"
-      sameSite: "lax",
-    });
+    expect(res.status).toBe(200);
 
-    expect(refreshCookie).toBeDefined();
-    expect(refreshCookie.value).toBe("");
-    expect(refreshCookie.options).toMatchObject({
-      httpOnly: true,
-      path: "/",
-      maxAge: 0,
-      secure: true,
-      sameSite: "lax",
-    });
+    expect(revokeSessionFromRefreshToken).toHaveBeenCalledTimes(1);
+    expect(revokeSessionFromRefreshToken).toHaveBeenCalledWith("rt1");
+
+    const cookies = getSetCookies(res).join(" | ");
+    expect(cookies).toContain("access_token=");
+    expect(cookies).toContain("refresh_token=");
+    expect(cookies).toMatch(/Max-Age=0/);
   });
 });

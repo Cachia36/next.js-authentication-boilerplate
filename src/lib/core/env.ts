@@ -14,6 +14,8 @@ const baseSchema = z.object({
   MONGODB_DB_NAME: z.string().optional(),
 
   PERSISTENCE_DRIVER: z.enum(["memory", "mongo"]).default("memory"),
+
+  REFRESH_TOKEN_PEPPER: z.string().optional(),
 });
 
 const isTest = process.env.NODE_ENV === "test";
@@ -66,3 +68,4 @@ export const PERSISTENCE_DRIVER = env.PERSISTENCE_DRIVER;
 
 export const MONGODB_URI = env.MONGODB_URI;
 export const MONGODB_DB_NAME = env.MONGODB_DB_NAME;
+export const REFRESH_TOKEN_PEPPER = env.REFRESH_TOKEN_PEPPER;

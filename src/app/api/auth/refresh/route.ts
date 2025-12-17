@@ -1,7 +1,22 @@
 import { NextResponse } from "next/server";
 import { repo } from "@/lib/auth/repositories/currentRepo";
-import { signAccessToken, verifyRefreshToken } from "@/lib/auth/domain/jwtService";
+import { signAccessToken } from "@/lib/auth/domain/jwtService";
+import { rotateRefreshToken } from "@/lib/auth/domain/refreshTokenService";
 import { NODE_ENV } from "@/lib/core/env";
+
+function readCookie(req: Request, name: string) {
+  const raw = req.headers.get("cookie");
+  if (!raw) return null;
+
+  // very small safe parser (no deps)
+  const parts = raw.split(";").map((c) => c.trim());
+  for (const p of parts) {
+    if (p.startsWith(name + "=")) {
+      return decodeURIComponent(p.slice(name.length + 1));
+    }
+  }
+  return null;
+}
 
 function clearAuthCookies(res: NextResponse) {
   const isProd = NODE_ENV === "production";
@@ -29,24 +44,23 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const next = url.searchParams.get("next") ?? "/dashboard";
 
-  // Read refresh cookie from request header
-  const refresh = req.headers
-    .get("cookie")
-    ?.split(";")
-    .map((c) => c.trim())
-    .find((c) => c.startsWith("refresh_token="))
-    ?.split("=")[1];
+  const refresh = readCookie(req, "refresh_token");
 
-  // If no refresh token, treat as logged out
   if (!refresh) {
     const res = NextResponse.redirect(new URL("/login", url.origin), { status: 303 });
     return clearAuthCookies(res);
   }
 
   try {
-    const { sub } = verifyRefreshToken(decodeURIComponent(refresh));
-    const user = await repo.findById(sub);
+    const rotation = await rotateRefreshToken(refresh);
 
+    // Invalid / reuse detected → force logout everywhere in that session family
+    if (!rotation.ok) {
+      const res = NextResponse.redirect(new URL("/login", url.origin), { status: 303 });
+      return clearAuthCookies(res);
+    }
+
+    const user = await repo.findById(rotation.userId);
     if (!user) {
       const res = NextResponse.redirect(new URL("/login", url.origin), { status: 303 });
       return clearAuthCookies(res);
@@ -61,12 +75,24 @@ export async function GET(req: Request) {
 
     const res = NextResponse.redirect(new URL(next, url.origin), { status: 303 });
 
+    const isProd = NODE_ENV === "production";
+
+    // Access token refreshed
     res.cookies.set("access_token", newAccessToken, {
       httpOnly: true,
       sameSite: "lax",
-      secure: NODE_ENV === "production",
+      secure: isProd,
       path: "/",
       maxAge: 15 * 60,
+    });
+
+    // Refresh token rotated (IMPORTANT)
+    res.cookies.set("refresh_token", rotation.refreshToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProd,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60,
     });
 
     return res;
