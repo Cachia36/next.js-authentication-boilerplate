@@ -102,3 +102,16 @@ html {
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* ===== Text selection – cool glow ===== */
+::selection {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--primary-foreground);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+::-moz-selection {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--primary-foreground);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--primary) 50%, transparent);
+}
