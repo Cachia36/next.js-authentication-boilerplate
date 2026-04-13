@@ -4,6 +4,9 @@ A modern, production-ready authentication boilerplate built with
 **Next.js App Router**, designed to be reusable, secure, and easy to
 extend for real-world applications.
 
+## 🌐 Live Demo
+https://next-js-authentication-boilerplate.vercel.app/
+
 ![Next.js](https://img.shields.io/badge/Next.js-App%20Router-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)
 ![Tests](https://img.shields.io/badge/tests-vitest-green)
