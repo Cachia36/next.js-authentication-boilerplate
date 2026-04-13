@@ -1,4 +1,5 @@
 import { FaGithub, FaLinkedin } from "react-icons/fa";
+import Image from "next/image";
 
 const year = new Date().getFullYear();
 
@@ -30,7 +31,12 @@ export default function Footer() {
           rel="noreferrer"
           className="border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground inline-flex h-10 w-10 items-center justify-center rounded-full border transition"
         >
-          <img src="/websiteLogo.png" className="h-6 w-6" alt="portfolio"/>
+          <Image
+            src="/websiteLogo.png"
+            alt="portfolio"
+            width={24}
+            height={24}
+          />
         </a>
       </div>
 
